@@ -3,15 +3,26 @@ package backend
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/dgrijalva/jwt-go"
-	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
-// Secret key for JWT signing - in production use environment variables
-var jwtKey = []byte("your_secret_key")
+// jwtKey retrieves the JWT secret key from environment variables or uses a fallback
+func getJWTKey() []byte {
+	// Get JWT secret from environment variable or use default
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		// In production, this should never happen - always use environment variables
+		jwtSecret = "your_secret_key"
+		log.Println("Warning: Using default JWT secret key. Set JWT_SECRET environment variable in production!")
+	}
+	return []byte(jwtSecret)
+}
 
 // Generate JWT token
 func generateToken(username string) (string, error) {
@@ -24,7 +35,7 @@ func generateToken(username string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtKey)
+	return token.SignedString(getJWTKey())
 }
 
 // Validate JWT token and extract username
@@ -33,7 +44,7 @@ func validateToken(tokenString string) (string, error) {
 		tokenString,
 		&JWTClaim{},
 		func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
+			return getJWTKey(), nil
 		},
 	)
 

@@ -2,9 +2,10 @@ package backend
 
 import (
 	"database/sql"
+	"time"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/websocket"
-	"time"
 )
 
 // User for registered users
@@ -42,6 +43,7 @@ type Message struct {
 	Content   string    `json:"content"`
 	Timestamp time.Time `json:"timestamp"`
 	IsPrivate bool      `json:"isPrivate"`
+	ClientId  string    `json:"clientId,omitempty"` // Client-generated ID to prevent duplicate messages
 }
 
 // Client represents a connected websocket client
