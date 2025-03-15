@@ -1,8 +1,6 @@
 # 💬 Real-Time Chat Application
 
 <div align="center">
-  
-![Chat App Logo](https://via.placeholder.com/150) <!-- You can replace this with your actual logo -->
 
 **A modern, feature-rich chat platform with real-time messaging, friend management, and Redis-powered performance.**
 
@@ -39,15 +37,6 @@
 - **🗄️ PostgreSQL Database**: Reliable and scalable data persistence
 - **🔄 Optimistic UI Updates**: Messages appear instantly for a fluid user experience
 - **⏱️ Accurate Timestamp Display**: Messages show precise sending time
-
-## 🖼️ Screenshots
-
-<div align="center">
-  <img src="https://via.placeholder.com/400x250?text=Chat+Interface" alt="Chat Interface" width="400" />
-  <img src="https://via.placeholder.com/400x250?text=Login+Screen" alt="Login Screen" width="400" />
-</div>
-
-<!-- Replace placeholder images with actual screenshots when available -->
 
 ## 🧰 Tech Stack
 
