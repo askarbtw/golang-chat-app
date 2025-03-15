@@ -80,8 +80,8 @@ To run this application, you need:
 #### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/chat-app.git
-cd chat-app
+git clone https://github.com/askarbtw/golang-chat-app.git
+cd golang-chat-app
 ```
 
 #### 2. Set up environment variables
@@ -168,5 +168,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-  <p>Made with ❤️ by <a href="https://github.com/yourusername">Your Name</a></p>
+  <p>Made with ❤️ by <a href="https://github.com/askarbtw">askarbtw</a></p>
 </div> 
