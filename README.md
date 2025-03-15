@@ -135,16 +135,6 @@ All configuration is handled through environment variables in the `.env` file:
 | `/api/friends/pending` | GET | Get pending friend requests |
 | `/ws` | WebSocket | Real-time communication endpoint |
 
-## 🔜 Coming Soon
-
-- **🔐 End-to-end encryption** for enhanced privacy
-- **✓ Read receipts** to confirm message delivery
-- **📎 File sharing** capabilities
-- **👪 Group chats** for multi-user conversations
-- **🖼️ User profiles** with custom avatars
-- **🔍 Message search** functionality
-- **📱 Mobile app** versions for iOS and Android
-
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
