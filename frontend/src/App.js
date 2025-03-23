@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './App.css';
+import { useAuth } from './contexts/AuthContext';
 
 function App() {
   const navigate = useNavigate();
+  const { login, isAuthenticated, loading, error: authError, clearError } = useAuth();
+  
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -13,13 +16,26 @@ function App() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    // If any auth errors exist, show them in the login form
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
+
+  useEffect(() => {
     // Check if user is already authenticated
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (!loading && isAuthenticated) {
       // Redirect to chat if already logged in
       navigate('/chat');
     }
-  }, [navigate]);
+  }, [navigate, isAuthenticated, loading]);
+
+  // Clear errors when unmounting
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
 
   // Handle input changes
   const handleChange = (e) => {
@@ -28,6 +44,8 @@ function App() {
       ...prevData,
       [name]: value
     }));
+    // Clear errors when user starts typing
+    setError('');
   };
 
   // Handle form submission
@@ -43,39 +61,35 @@ function App() {
     setError('');
     
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
+      const success = await login(formData.username, formData.password);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Login failed');
+      if (success) {
+        // Show success message
+        setMessage('Login successful! Redirecting...');
+        
+        // Redirect to chat interface using React Router
+        setTimeout(() => {
+          navigate('/chat');
+        }, 1000);
       }
-      
-      const data = await response.json();
-      
-      // Store token in localStorage
-      localStorage.setItem('token', data.token);
-      
-      // Show success message
-      setMessage('Login successful! Redirecting...');
-      
-      // Redirect to chat interface using React Router
-      setTimeout(() => {
-        navigate('/chat');
-      }, 1500);
-      
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // If still checking authentication, show loading
+  if (loading) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <h1>Chat Application</h1>
+          <p>Loading...</p>
+        </header>
+      </div>
+    );
+  }
 
   return (
     <div className="app">

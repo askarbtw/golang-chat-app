@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
+import Friends from './Friends/Friends';
+import { useAuth } from '../contexts/AuthContext';
 
 function Chat() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, user, logout, loading } = useAuth();
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
   const [socket, setSocket] = useState(null);
@@ -17,6 +19,7 @@ function Chat() {
   const [sentMessageIds, setSentMessageIds] = useState(new Set());
   const [connectionError, setConnectionError] = useState(null);
   const reconnectTimeoutRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'friends'
   
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -149,19 +152,8 @@ function Chat() {
       return;
     }
     
-    setIsAuthenticated(true);
-    
-    // Try to extract username from token
-    try {
-      const tokenParts = token.split('.');
-      if (tokenParts.length === 3) {
-        const payload = JSON.parse(atob(tokenParts[1]));
-        if (payload && payload.username) {
-          setUsername(payload.username);
-        }
-      }
-    } catch (err) {
-      console.error("Error parsing token:", err);
+    if (isAuthenticated) {
+      setUsername(user.username);
     }
     
     // Start WebSocket connection
@@ -178,7 +170,7 @@ function Chat() {
         ws.close(1000, "Component unmounting");
       }
     };
-  }, [navigate]);
+  }, [navigate, isAuthenticated, user]);
   
   // Generate a unique ID for messages
   const generateMessageId = () => {
@@ -259,6 +251,7 @@ function Chat() {
     if (socket) {
       socket.close(1000, "User logout");
     }
+    logout();
     localStorage.removeItem('token');
     navigate('/');
   };
@@ -321,405 +314,216 @@ function Chat() {
     return onlineUsers.includes(user);
   };
   
+  // Handle selecting a user from the friends list
+  const handleSelectUserFromFriends = (username) => {
+    setSelectedUser(username);
+    setActiveTab('chat'); // Switch to chat tab when a friend is selected
+  };
+  
+  // Check authentication on component mount
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate('/');
+    } else if (user) {
+      setUsername(user.username);
+    }
+  }, [isAuthenticated, user, navigate, loading]);
+  
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="mb-4 text-blue-600 text-4xl">
+            <span className="animate-pulse">•</span>
+            <span className="animate-pulse animation-delay-200">•</span>
+            <span className="animate-pulse animation-delay-400">•</span>
+          </div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+  
   if (!isAuthenticated) {
-    return <div>Checking authentication...</div>;
+    return null; // Will be redirected by the useEffect
   }
   
   const displayUsers = getAllUsersToDisplay();
   
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Chat Application</h1>
-        {isConnected ? (
-          <span style={{ 
-            position: 'absolute', 
-            left: '20px', 
-            top: '20px',
-            background: 'rgba(255,255,255,0.2)',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '0.8rem'
-          }}>
-            <span style={{ 
-              display: 'inline-block', 
-              width: '8px', 
-              height: '8px', 
-              borderRadius: '50%', 
-              backgroundColor: '#4ade80', 
-              marginRight: '6px' 
-            }}></span>
-            Connected
-          </span>
-        ) : (
-          <span 
-            onClick={handleRetryConnection}
-            style={{ 
-              position: 'absolute', 
-              left: '20px', 
-              top: '20px',
-              background: 'rgba(255,255,255,0.2)',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '0.8rem',
-              cursor: 'pointer'
-            }}
+    <div className="chat-container flex flex-col h-screen bg-gray-100">
+      <header className="bg-blue-600 text-white p-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <h1 className="text-xl font-bold">Chat App</h1>
+          <button
+            onClick={handleLogout}
+            className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded"
           >
-            <span style={{ 
-              display: 'inline-block', 
-              width: '8px', 
-              height: '8px', 
-              borderRadius: '50%', 
-              backgroundColor: '#ef4444', 
-              marginRight: '6px' 
-            }}></span>
-            Disconnected (click to reconnect)
-          </span>
-        )}
-        <span style={{
-          position: 'absolute',
-          right: '100px',
-          top: '20px',
-          color: 'white',
-          fontSize: '0.9rem'
-        }}>
-          Logged in as: {username}
-        </span>
-        <button 
-          onClick={handleLogout}
-          style={{
-            position: 'absolute',
-            right: '20px',
-            top: '20px',
-            background: 'rgba(255,255,255,0.2)',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '4px',
-            color: 'white',
-            cursor: 'pointer'
-          }}
-        >
-          Logout
-        </button>
+            Logout
+          </button>
+        </div>
       </header>
-      
-      {connectionError && (
-        <div style={{
-          background: '#fee2e2',
-          color: '#b91c1c',
-          padding: '0.75rem',
-          textAlign: 'center',
-          fontSize: '0.875rem',
-          fontWeight: 500,
-          borderBottom: '1px solid #fecaca'
-        }}>
-          {connectionError}
-          {!isConnected && (
-            <button 
-              onClick={handleRetryConnection}
-              style={{
-                marginLeft: '1rem',
-                background: '#b91c1c',
-                color: 'white',
-                border: 'none',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '0.25rem',
-                fontSize: '0.75rem',
-                cursor: 'pointer'
-              }}
-            >
-              Retry Connection
-            </button>
-          )}
-        </div>
-      )}
-      
-      <main className="app-main" style={{ justifyContent: 'flex-start', alignItems: 'stretch' }}>
-        <div style={{ 
-          display: 'flex', 
-          width: '100%', 
-          maxWidth: '1200px', 
-          margin: '0 auto',
-          height: connectionError ? '70vh' : '75vh',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          borderRadius: '8px',
-          overflow: 'hidden'
-        }}>
-          {/* Sidebar */}
-          <div style={{ 
-            width: '250px', 
-            background: 'white',
-            borderRight: '1px solid #e2e8f0',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div style={{
-              padding: '1rem',
-              borderBottom: '1px solid #e2e8f0',
-              background: '#f8fafc'
-            }}>
-              <h3 style={{ margin: 0 }}>Conversations</h3>
-            </div>
-            
-            <div style={{ 
-              overflow: 'auto',
-              flex: 1,
-              padding: '0.5rem'
-            }}>
-              <div 
-                onClick={() => setSelectedUser(null)}
-                style={{
-                  padding: '0.75rem',
-                  borderRadius: '0.375rem',
-                  marginBottom: '0.25rem',
-                  background: !selectedUser ? '#e5efff' : 'transparent',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: '#0080ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  marginRight: '0.75rem',
-                  fontSize: '0.875rem'
-                }}>
-                  All
-                </div>
-                <div>
-                  <div style={{ fontWeight: 500 }}>Global Chat</div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Everyone</div>
-                </div>
-              </div>
-              
-              {displayUsers.map((user, index) => (
-                <div 
-                  key={index}
-                  onClick={() => handleSelectUser(user)}
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: '0.375rem',
-                    marginBottom: '0.25rem',
-                    background: selectedUser === user ? '#e5efff' : 'transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: '#64748b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    marginRight: '0.75rem',
-                    fontSize: '0.875rem',
-                    textTransform: 'uppercase',
-                    position: 'relative'
-                  }}>
-                    {user.charAt(0)}
-                    
-                    {/* Online/offline status indicator */}
-                    <span style={{ 
-                      position: 'absolute',
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      backgroundColor: isUserOnline(user) ? '#4ade80' : '#9ca3af',
-                      border: '2px solid white',
-                      bottom: '-2px',
-                      right: '-2px'
-                    }}></span>
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{user}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      {isUserOnline(user) ? 'Online' : 'Offline'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {displayUsers.length === 0 && (
-                <div style={{ 
-                  padding: '1rem', 
-                  color: '#6b7280', 
-                  textAlign: 'center',
-                  fontSize: '0.875rem' 
-                }}>
-                  No conversations yet
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Main chat area */}
-          <div style={{ 
-            flex: '1',
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'white'
-          }}>
-            <div style={{ 
-              padding: '1rem', 
-              borderBottom: '1px solid #e2e8f0',
-              background: '#f8fafc',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <h3 style={{ margin: 0 }}>
-                {selectedUser ? `Chat with ${selectedUser}` : 'Global Chat'}
-              </h3>
-              {selectedUser && (
-                <span style={{ 
-                  marginLeft: '10px',
-                  fontSize: '0.75rem',
-                  background: isUserOnline(selectedUser) ? '#ecfdf5' : '#f3f4f6',
-                  color: isUserOnline(selectedUser) ? '#065f46' : '#6b7280',
-                  padding: '2px 8px',
-                  borderRadius: '10px'
-                }}>
-                  {isUserOnline(selectedUser) ? 'Online' : 'Offline'}
-                </span>
-              )}
-            </div>
-            
-            <div style={{ 
-              flex: '1',
-              padding: '1rem',
-              overflowY: 'auto',
-              background: '#f9fafb'
-            }}>
-              {messages.filter(msg => 
-                // Show all messages in global chat
-                (!selectedUser && msg.recipient === 'all') || 
-                // Show direct messages between the user and selected recipient
-                (selectedUser && ((msg.sender === selectedUser && msg.recipient === username) || 
-                                 (msg.sender === username && msg.recipient === selectedUser)))
-              ).map((msg, index) => (
-                <div 
-                  key={msg.clientId || index}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: msg.sender === username ? 'flex-end' : 'flex-start',
-                    marginBottom: '1rem'
-                  }}
-                >
-                  <div style={{
-                    maxWidth: '70%',
-                    background: msg.sender === username ? '#0080ff' : 'white',
-                    color: msg.sender === username ? 'white' : '#333',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '0.75rem',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-                    border: msg.sender !== username ? '1px solid #e2e8f0' : 'none'
-                  }}>
-                    {msg.content}
-                  </div>
-                  <div style={{
-                    fontSize: '0.75rem',
-                    color: '#6b7280',
-                    marginTop: '0.25rem',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    {msg.sender !== username && !selectedUser && (
-                      <span style={{ marginRight: '0.5rem', fontWeight: 500 }}>{msg.sender}</span>
-                    )}
-                    <span>{formatTimestamp(msg.timestamp)}</span>
-                  </div>
-                </div>
-              ))}
-              
-              {messages.filter(msg => 
-                (!selectedUser && msg.recipient === 'all') || 
-                (selectedUser && ((msg.sender === selectedUser && msg.recipient === username) || 
-                                (msg.sender === username && msg.recipient === selectedUser)))
-              ).length === 0 && (
-                <div style={{ 
-                  textAlign: 'center', 
-                  color: '#6b7280', 
-                  marginTop: '2rem',
-                  fontSize: '0.875rem' 
-                }}>
-                  {selectedUser 
-                    ? `Start a conversation with ${selectedUser}`
-                    : "No messages in global chat. Be the first to say hello!"}
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
-            
-            <div style={{ 
-              padding: '1rem',
-              borderTop: '1px solid #e2e8f0',
-              background: 'white'
-            }}>
-              <form onSubmit={handleSendMessage} style={{ display: 'flex' }}>
-                <input 
-                  type="text" 
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  placeholder={`Message ${selectedUser || 'everyone'}...`}
-                  disabled={!isConnected}
-                  style={{
-                    flex: '1',
-                    padding: '0.75rem',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '4px',
-                    marginRight: '0.5rem',
-                    fontSize: '0.875rem'
-                  }}
-                />
+
+      <div className="flex-grow flex overflow-hidden">
+        <div className="flex flex-col w-full container mx-auto p-4 h-full">
+          <div className="flex-grow flex bg-white rounded-lg shadow-md overflow-hidden">
+            {/* Sidebar with user list and tabs */}
+            <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
+              {/* Tabs for Chat/Friends */}
+              <div className="flex border-b">
                 <button
-                  type="submit"
-                  disabled={!messageInput.trim() || !isConnected}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    background: '#0080ff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: messageInput.trim() && isConnected ? 'pointer' : 'not-allowed',
-                    opacity: messageInput.trim() && isConnected ? 1 : 0.7,
-                    fontSize: '0.875rem',
-                    fontWeight: 500
-                  }}
+                  className={`flex-1 py-3 font-medium ${
+                    activeTab === 'chat'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  onClick={() => setActiveTab('chat')}
                 >
-                  Send
+                  Chat
                 </button>
-              </form>
-              
-              {selectedUser && !isUserOnline(selectedUser) && (
-                <div style={{ 
-                  marginTop: '0.5rem', 
-                  fontSize: '0.75rem', 
-                  color: '#6b7280',
-                  textAlign: 'center'
-                }}>
-                  Note: This user is currently offline. Messages will be delivered when they come online.
+                <button
+                  className={`flex-1 py-3 font-medium ${
+                    activeTab === 'friends'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  onClick={() => setActiveTab('friends')}
+                >
+                  Friends
+                </button>
+              </div>
+
+              {/* Show user list only in chat tab */}
+              {activeTab === 'chat' && (
+                <div className="flex-1 overflow-y-auto">
+                  {/* Render existing user list code */}
+                  <div className="p-4 border-b">
+                    <h2 className="font-bold text-gray-700">Online Users</h2>
+                  </div>
+                  <ul className="divide-y divide-gray-200">
+                    {getAllUsersToDisplay().map(user => (
+                      <li
+                        key={user}
+                        className={`p-3 cursor-pointer ${
+                          selectedUser === user ? 'bg-blue-100' : 'hover:bg-gray-100'
+                        }`}
+                        onClick={() => handleSelectUser(user)}
+                      >
+                        <div className="flex items-center">
+                          <div className={`w-2 h-2 rounded-full mr-2 ${isUserOnline(user) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                          <span>{user}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Show friends component in friends tab */}
+              {activeTab === 'friends' && (
+                <div className="flex-1 overflow-hidden">
+                  <Friends onSelectUser={handleSelectUserFromFriends} />
                 </div>
               )}
             </div>
+
+            {/* Main content area */}
+            <div className="flex-1 flex flex-col">
+              {connectionError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 m-4 rounded relative" role="alert">
+                  <strong className="font-bold">Connection Error!</strong>
+                  <span className="block sm:inline ml-2">{connectionError}</span>
+                  <button
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded mt-2"
+                    onClick={handleRetryConnection}
+                  >
+                    Retry Connection
+                  </button>
+                </div>
+              )}
+
+              {/* Keep the existing chat UI */}
+              <div className="flex-1 overflow-y-auto p-4" style={{ 
+                height: connectionError ? '70vh' : '75vh', 
+                overflowY: 'auto' 
+              }}>
+                {/* Render existing messages code */}
+                {selectedUser && (
+                  <div className="text-center mb-4 bg-gray-100 p-2 rounded">
+                    <h2 className="font-bold">Chatting with: {selectedUser}</h2>
+                  </div>
+                )}
+                {renderMessages()}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message input */}
+              <div className="border-t p-4">
+                <form onSubmit={handleSendMessage} className="flex">
+                  <input
+                    type="text"
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 border rounded-l px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
+                    disabled={!isConnected}
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
-      <footer className="app-footer">
-        <p>© 2023 Chat Application. All rights reserved.</p>
-      </footer>
+      </div>
     </div>
   );
+
+  // Keep all existing functions like renderMessages(), etc.
+  function renderMessages() {
+    const messagesToShow = messages.filter(msg => 
+      // Show all messages in global chat
+      (!selectedUser && msg.recipient === 'all') || 
+      // Show direct messages between the user and selected recipient
+      (selectedUser && ((msg.sender === selectedUser && msg.recipient === username) || 
+                        (msg.sender === username && msg.recipient === selectedUser)))
+    );
+    
+    if (messagesToShow.length === 0) {
+      return (
+        <div className="text-center text-gray-500 my-8">
+          {selectedUser 
+            ? `Start a conversation with ${selectedUser}`
+            : "No messages in global chat. Be the first to say hello!"}
+        </div>
+      );
+    }
+    
+    return messagesToShow.map((msg, index) => (
+      <div 
+        key={msg.clientId || index}
+        className={`flex flex-col mb-4 ${msg.sender === username ? 'items-end' : 'items-start'}`}
+      >
+        <div className={`max-w-[70%] p-3 rounded-lg shadow-sm ${
+          msg.sender === username 
+            ? 'bg-blue-500 text-white' 
+            : 'bg-white border border-gray-200 text-gray-800'
+        }`}>
+          {msg.content}
+        </div>
+        <div className="text-xs text-gray-500 mt-1 flex items-center">
+          {msg.sender !== username && !selectedUser && (
+            <span className="font-medium mr-2">{msg.sender}</span>
+          )}
+          <span>{formatTimestamp(msg.timestamp)}</span>
+        </div>
+      </div>
+    ));
+  }
 }
 
 export default Chat; 
