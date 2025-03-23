@@ -2,8 +2,6 @@
 
 <div align="center">
   
-![Chat App Logo](https://via.placeholder.com/150) <!-- You can replace this with your actual logo -->
-
 **A modern, feature-rich chat platform with real-time messaging, friend management, and Redis-powered performance.**
 
 [![Go Version](https://img.shields.io/badge/Go-1.18+-00ADD8?style=flat-square&logo=go)](https://golang.org)
@@ -43,11 +41,10 @@
 ## 🖼️ Screenshots
 
 <div align="center">
-  <img src="https://via.placeholder.com/400x250?text=Chat+Interface" alt="Chat Interface" width="400" />
-  <img src="https://via.placeholder.com/400x250?text=Login+Screen" alt="Login Screen" width="400" />
-</div>
+  <img width="1440" alt="image" src="https://github.com/user-attachments/assets/2f453103-96a8-4dde-aa0a-07c6c078da01" />
 
-<!-- Replace placeholder images with actual screenshots when available -->
+  <img width="1440" alt="image" src="https://github.com/user-attachments/assets/998faaff-54ee-440b-b3d5-24ea63b57e0d" />
+</div>
 
 ## 🧰 Tech Stack
 
