@@ -26,7 +26,7 @@ func getJWTKey() []byte {
 
 // Generate JWT token
 func generateToken(username string) (string, error) {
-	expirationTime := time.Now().Add(24 * time.Hour)
+	expirationTime := time.Now().Add(30 * 24 * time.Hour)
 	claims := &JWTClaim{
 		Username: username,
 		StandardClaims: jwt.StandardClaims{
